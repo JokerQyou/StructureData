@@ -23,6 +23,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
         // Register $this->header to be called when processing
         // instance of Widget_Archive class.
         Typecho_Plugin::factory('Widget_Archive')->header = array('StructureData_Plugin', 'header');
+        return _t('插件已激活，请先设置相关信息!');
     }
     
     /**
@@ -42,7 +43,14 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
      * @param Typecho_Widget_Helper_Form $form 配置面板
      * @return void
      */
-    public static function config(Typecho_Widget_Helper_Form $form){}
+    public static function config(Typecho_Widget_Helper_Form $form)
+    {
+        $defaultImage = new Typecho_Widget_Helper_Form_Element_Text('defaultImage', null, null, _t('默认文章图片：'));
+        $form->addInput($defaultImage->addRule('required', _t('“默认文章图片”不能为空！'))->addRule('url', _t('您输入的URL格式错误！')));
+
+        $siteLogo = new Typecho_Widget_Helper_Form_Element_Text('siteLogo', null, null, _('站点 logo：'));
+        $form->addInput($siteLogo->addRule('required', _t('“站点 logo”不能为空！'))->addRule('url', _t('您输入的URL格式错误！')));
+    }
     
     /**
      * 个人用户的配置面板
@@ -72,6 +80,9 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
             return;
         }
 
+        // Read plugin options as fallback values
+        $plugin_options = Typecho_Widget::widget('Widget_Options')->plugin('StructureData');
+
         // Dates and headline
         $datePublished = date('c', $post->created);
         $dateModified = date('c', $post->modified ? $post->modified : $post->created);
@@ -87,7 +98,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
 
         // Publisher
         $publisherName = $options->title;
-        $publisherLogo = '';
+        $publisherLogo = $plugin_options->siteLogo;
 
         // Main image of current blog post
         // Use `image` custom field value if presented
@@ -101,7 +112,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
             }
             // Fallback to a default value configured by the user
             if(empty($imageURL)){
-                $imageURL = '';
+                $imageURL = $plugin_options->defaultImage;
             }
         }
         $imageHeight = $post->fields->imageHeight ? $post->fields->imageHeight : 200;
