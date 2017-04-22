@@ -22,7 +22,6 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
     {
         // Register $this->header to be called when processing
         // instance of Widget_Archive class.
-        // Typecho_Plugin::factory('Widget_Abstract_Contents')->header = array('StructureData_Plugin', 'header');
         Typecho_Plugin::factory('Widget_Archive')->header = array('StructureData_Plugin', 'header');
     }
     
@@ -62,6 +61,17 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
      * @return unknown
      */
     public static function header($header, $post) {
+        // Do not output anything if post is password protected
+        $options = Typecho_Widget::widget('Widget_Options');
+        $db = Typecho_Db::get();
+        $post_row = $db->fetchAll(
+            $db->select()->from('table.contents')
+            ->where('table.contents.cid = ?', $post->cid)
+        );
+        if(isset($post_row[0]['password'])){
+            return;
+        }
+
         // Dates and headline
         $datePublished = date('c', $post->created);
         $dateModified = date('c', $post->modified ? $post->modified : $post->created);
@@ -76,17 +86,23 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
         $translated = $post->fields->translated;
 
         // Publisher
-        $publisherName = Typecho_Widget::widget('Widget_Options')->title;
+        $publisherName = $options->title;
         $publisherLogo = '';
 
         // Main image of current blog post
         // Use `image` custom field value if presented
-        if($post->fields->image){
+        if(!empty($post->fields->image)){
             $imageURL = $post->fields->image;
         }else{
             // Try to find the first image attachment
-            $imageURL = '';
+            $attachment = $post->attachments(1)->attachment;
+            if($attachment->isImage){
+                $imageURL = $attachment->url;
+            }
             // Fallback to a default value configured by the user
+            if(empty($imageURL)){
+                $imageURL = '';
+            }
         }
         $imageHeight = $post->fields->imageHeight ? $post->fields->imageHeight : 200;
         $imageWidth = $post->fields->imageWidth ? $post->fields->imageWidth : 696;
