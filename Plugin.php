@@ -45,11 +45,45 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-        $defaultImage = new Typecho_Widget_Helper_Form_Element_Text('defaultImage', null, null, _t('默认文章图片：'));
-        $form->addInput($defaultImage->addRule('required', _t('“默认文章图片”不能为空！'))->addRule('url', _t('您输入的URL格式错误！')));
+        $defaultImage = new Typecho_Widget_Helper_Form_Element_Text(
+            'defaultImage', null, null, _t('默认文章图片：')
+        );
+        $form->addInput(
+            $defaultImage->addRule('required', _t('“默认文章图片”不能为空！'))
+            ->addRule('url', _t('您输入的URL格式错误！'))
+        );
 
-        $siteLogo = new Typecho_Widget_Helper_Form_Element_Text('siteLogo', null, null, _('站点 logo：'));
-        $form->addInput($siteLogo->addRule('required', _t('“站点 logo”不能为空！'))->addRule('url', _t('您输入的URL格式错误！')));
+        $siteLogo = new Typecho_Widget_Helper_Form_Element_Text(
+            'siteLogo', null, null, _('站点 logo：')
+        );
+        $form->addInput(
+            $siteLogo->addRule('required', _t('“站点 logo”不能为空！'))
+            ->addRule('url', _t('您输入的URL格式错误！'))
+        );
+
+        $publisherType = new Typecho_Widget_Helper_Form_Element_Select(
+            'publisherType',
+            array(
+                'Person' => _t('个人'),
+                'Organization' => _t('组织')
+            ),
+            'Organization',
+            _t('发布者（publisher 字段）类型'),
+            _t('选择“个人”，将使用文章作者的名字；选择“组织”，将使用站点名字和“站点 logo”')
+        );
+        $form->addInput($publisherType);
+
+        $contentType = new Typecho_Widget_Helper_Form_Element_Select(
+            'contentType',
+            array(
+                'Article' => _t('文章'),
+                'BlogPosting' => _t('博文')
+            ),
+            'BlogPosting',
+            _t('内容类型'),
+            _t('选择“文章”，将输出“Article”类型；选择“博文”，将输出“BlogPosting”类型')
+        );
+        $form->addInput($contentType);
     }
     
     /**
@@ -70,7 +104,6 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
      */
     public static function header($header, $post) {
         // Do not output anything if post is password protected
-        $options = Typecho_Widget::widget('Widget_Options');
         $db = Typecho_Db::get();
         $post_row = $db->fetchAll(
             $db->select()->from('table.contents')
@@ -82,6 +115,10 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
 
         // Read plugin options as fallback values
         $plugin_options = Typecho_Widget::widget('Widget_Options')->plugin('StructureData');
+        $options = Typecho_Widget::widget('Widget_Options');
+
+        $postType = $plugin_options->contentType;
+        $publisherType = $plugin_options->publisherType;
 
         // Dates and headline
         $datePublished = date('c', $post->created);
@@ -97,8 +134,14 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
         $translated = $post->fields->translated;
 
         // Publisher
-        $publisherName = $options->title;
-        $publisherLogo = $plugin_options->siteLogo;
+        // Google does not allow publisher.type to be Person, but
+        // schema.org does.
+        if($publisherType == 'Organization'){
+            $publisherName = $options->title;
+            $publisherLogo = $plugin_options->siteLogo;
+        }else{
+            $publisherName = $authorName;
+        }
 
         // Main image of current blog post
         // Use `image` custom field value if presented
@@ -122,7 +165,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
 <script type="application/ld+json">
 {
     "@context": "http://schema.org",
-    "@type": "BlogPosting",
+    "@type": "{$postType}",
     "mainEntityOfPage": {
         "@type": "WebPage",
         "@id": "{$postPermaLink}"
@@ -148,15 +191,30 @@ JSONLD_TRANSLATOR;
         }
 
 
-        echo <<<JSONLD_END
+        if($publisherType == 'Organization'){
+            echo <<<JSONLD_PUBLISHER_ORG
     "publisher": {
-        "@type": "Organization",
+        "@type": "{$publisherType}",
         "name": "{$publisherName}",
         "logo": {
             "@type": "ImageObject",
             "url": "{$publisherLogo}"
         }
     },
+
+JSONLD_PUBLISHER_ORG;
+
+        }else{
+            echo <<<JSONLD_PUBLISHER_PERSON
+    "publisher": {
+        "@type": "{$publisherType}",
+        "name": "{$publisherName}"
+    },
+
+JSONLD_PUBLISHER_PERSON;
+        }
+
+        echo <<<JSONLD_END
     "image": {
         "@type": "ImageObject",
         "url": "{$imageURL}",
