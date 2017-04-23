@@ -4,7 +4,7 @@
  * 
  * @package StructureData
  * @author Joker Qyou
- * @version 0.2.1
+ * @version 0.3.0
  * @link https://blog.mynook.info/
  */
 
