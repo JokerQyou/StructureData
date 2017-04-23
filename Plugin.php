@@ -84,6 +84,17 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
             _t('选择“文章”，将输出“Article”类型；选择“博文”，将输出“BlogPosting”类型')
         );
         $form->addInput($contentType);
+
+        $imageURLFormat = new Typecho_Widget_Helper_Form_Element_Text(
+            'imageURLFormat',
+            null,
+            '{image_url}',
+            _t('题图链接格式'),
+            _t('适用于类似七牛的图片处理样式名（后缀）；可用参数：{image_url} 图片地址')
+        );
+        $form->addInput(
+            $imageURLFormat->addRule('required', _t('“题图链接格式”不能为空！'))
+        );
     }
     
     /**
@@ -158,6 +169,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
                 $imageURL = $plugin_options->defaultImage;
             }
         }
+        $imageURL = str_replace('{image_url}', $imageURL, $plugin_options->imageURLFormat);
         $imageHeight = $post->fields->imageHeight ? $post->fields->imageHeight : 200;
         $imageWidth = $post->fields->imageWidth ? $post->fields->imageWidth : 696;
 
