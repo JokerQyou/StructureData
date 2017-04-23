@@ -145,7 +145,7 @@ class StructureData_Plugin implements Typecho_Plugin_Interface
 
         // Main image of current blog post
         // Use `image` custom field value if presented
-        if(!empty($post->fields->image)){
+        if($post->fields->image){
             $imageURL = $post->fields->image;
         }else{
             // Try to find the first image attachment
